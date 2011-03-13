@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<color name="puzzle_background">#ffe6f0ff</color>
+	<color name="puzzle_hilte">#ffffffff</color>
+	<color name="puzzle_light">#64c6d4ef</color>
+	<color name="puzzle_dark">#64ff0000</color>
+	<color name="puzzle_foreground">#ff000000</color>
+	<color name="puzzle_invalid">#64ff0000</color>
+	<color name="puzzle_selected">#64ff8000</color>
+</resources>
