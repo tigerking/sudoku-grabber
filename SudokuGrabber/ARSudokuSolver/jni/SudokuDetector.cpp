@@ -217,22 +217,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sudoku_SudokuDetector_detectSudoku
 
 	recognizeDigits(undistorted,su,byteOrder);
 	LOGI("Recognizing Digits Done");
-	/*
-	if(pImage == NULL){
-		for(int i = 0; i<9; i++){
-			for(int j=0; j<9; j++){
-				su[i][j] = 0;
-			}
-		}
-	}else{
-		for(int i = 0; i<9; i++){
-			for(int j=0; j<9; j++){
-				su[i][j] = j;
-			}
-		}
-	}
 
-	*/
 	if(su==NULL){
 		for(int i = 0; i<9; i++){
 			for(int j=0; j<9; j++){
