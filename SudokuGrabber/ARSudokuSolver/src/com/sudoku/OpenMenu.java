@@ -1,11 +1,17 @@
 package com.sudoku;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
 import com.sudoku.gui.FolderListActivity;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -43,6 +49,7 @@ public class OpenMenu extends Activity implements OnClickListener {
 			startActivity(aboutAct);
 			break;
 		case R.id.grab_sudoku_button:
+			checkSample();
 			Intent grabSudokuAct = new Intent(this, SudokuSelector.class);
 			startActivity(grabSudokuAct);
 			break;
@@ -58,5 +65,45 @@ public class OpenMenu extends Activity implements OnClickListener {
 		}
 		
 	}
-	
+	private void checkSample(){
+		String dataPath = getResources().getString(R.string.sample_data_path);
+		String labelPath = getResources().getString(R.string.sample_label_path);
+		String dataName = getResources().getString(R.string.sample_data_name);
+		String labelName = getResources().getString(R.string.sample_label_name);
+		FileInputStream fi;
+		try {
+			 fi= new FileInputStream(dataPath);
+		} catch (IOException e) {
+			try {
+				InputStream bf = getAssets().open(dataName);
+				FileOutputStream fo = new FileOutputStream(dataPath);
+				byte[] buf = new byte[1024];
+				int len = 0;
+				while((len = bf.read(buf))>0){
+					fo.write(buf,0,len);
+				}
+				bf.close();
+				fo.close();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+		}
+		try {
+			fi = new FileInputStream(labelPath);
+		} catch (IOException e) {
+			try {
+				InputStream bf = getAssets().open(labelName);
+				FileOutputStream fo = new FileOutputStream(labelPath);
+				byte[] buf = new byte[1024];
+				int len = 0;
+				while((len = bf.read(buf))>0){
+					fo.write(buf,0,len);
+				}
+				bf.close();
+				fo.close();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+		}
+	}
 }

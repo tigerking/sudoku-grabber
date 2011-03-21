@@ -31,7 +31,6 @@ public class SudokuSelector extends Activity implements OnClickListener {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.select_sudoku);
-
 		if(bitmap!=null){
 			ImageView imageView = (ImageView) findViewById(R.id.sudoku_image);
 			imageView.setImageBitmap(bitmap);

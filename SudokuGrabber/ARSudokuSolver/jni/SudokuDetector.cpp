@@ -13,7 +13,7 @@
 #define BIG_ENDIAN 0
 #define LITTLE_ENDIAN 1
 #define ANDROID_LOG_VERBOSE ANDROID_LOG_DEBUG
-#define LOG_TAG "CVJNI"
+#define LOG_TAG "SodukuDetector"
 #define LOGV(...) __android_log_print(ANDROID_LOG_SILENT, LOG_TAG, __VA_ARGS__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
@@ -273,7 +273,7 @@ IplImage* getIplImageFromIntArray(JNIEnv* env, jintArray array_data,
 }
 
 void recognizeDigits(IplImage* undistorted, int sudo[9][9], int byteOrder){
-	int offset = 2; // offest
+	int offset = 5; // offest
 	int imgWidth = undistorted->width;
 	int imgHeight = undistorted->height;
 	int sqrWidth = imgWidth/9+1;
@@ -332,29 +332,29 @@ void recognizeDigits(IplImage* undistorted, int sudo[9][9], int byteOrder){
 					if(coX - offset < 0){
 						coXL = 0;
 					}else {
-						coXL = coX - offset;
+						coXL = coX - (1.5)*offset;
 					}
 
 					if(coX + offset + sqrWidth >imgWidth){
 						coXR = imgWidth;
 					}else{
-						coXR = coX + offset + sqrWidth;
+						coXR = coX  + sqrWidth;
 					}
 
 					if(coY - offset <0){
 						coYT = 0;
 					}else{
-						coYT = coY - offset;
+						coYT = coY - (1.5)*offset;
 					}
 
 					if(coY + offset + sqrHeight > imgHeight){
 						coYB = imgHeight;
 					}else{
-						coYB = coY + offset + sqrHeight;
+						coYB = coY + sqrHeight;
 					}
 
-					width = coXR - coXL + 1;
-					height = coYB - coYT + 1;
+					width = coXR - coXL - offset;
+					height = coYB - coYT- offset;
 
 					cvSetImageROI(greyPic,cvRect(coXL,coYT,width,height));
 					piece = cvCreateImage(cvGetSize(greyPic),IPL_DEPTH_8U,1);
