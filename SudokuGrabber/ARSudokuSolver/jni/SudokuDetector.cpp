@@ -62,7 +62,6 @@ bool DigitReader :: train(char* dataPath, char* labelPath, int byteOrder){
 int DigitReader::recognize(CvMat* data){
 	CvMat* nearests = cvCreateMat( 1, K, CV_32FC1);
 	int response = knn.find_nearest(data,K,0,0,nearests,0);
-//	int response = 4;
 	return response;
 }
 int DigitReader::readInteger(FILE* fp, int byteOrder){
@@ -168,7 +167,45 @@ IplImage* findCorners(IplImage* res, CvPoint* cPoints);
 IplImage* smoothImage(IplImage* src);
 void findblob(IplImage* res);
 void recognizeDigits(IplImage* undistorted, int sudoku[9][9], int byteOrder);
+double cosAngle(CvPoint p1, CvPoint p2, CvPoint p0);
+bool checkSudokuSquare(CvPoint* corners);
 
+double cosAngle(CvPoint p1, CvPoint p2, CvPoint p0){
+    double dx1 = p1.x - p0.x;
+    double dy1 = p1.y - p0.y;
+    double dx2 = p2.x - p0.x;
+    double dy2 = p2.y - p0.y;
+    return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2) + 1e-10);
+}
+
+bool checkSudokuSquare(CvPoint* corners){
+	CvPoint topLeft = corners[0];
+	CvPoint topRight = corners[1];
+	CvPoint bottomRight = corners[2];
+	CvPoint bottomLeft = corners[3];
+
+	double maxCosine = 0;
+	double angle = 0;
+
+	// Check the topLeft corner
+	angle = cosAngle(topRight, bottomLeft, topLeft);
+	maxCosine = max(maxCosine, angle);
+
+	// Check the topRight corner
+	angle = cosAngle(topLeft, bottomRight, topRight);
+	maxCosine = max(maxCosine, angle);
+
+	// Check the bottomLeft corner
+	angle = cosAngle(topLeft, bottomRight, bottomLeft);
+	maxCosine = max(maxCosine, angle);
+
+	// Check the bottomRight corner
+	angle = cosAngle(topRight, bottomLeft, bottomRight);
+	maxCosine = max(maxCosine, angle);
+
+
+	return maxCosine<0.3;
+}
 
 JNIEXPORT jboolean JNICALL Java_com_sudoku_SudokuDetector_setSourceImage
   (JNIEnv *env, jobject obj, jintArray photo_data, jint width, jint height){
@@ -198,7 +235,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sudoku_SudokuDetector_detectSudoku
 		return NULL; /* out of memory error thrown */
 	}
 
-	jint su[9][9] = {{0}};
+	int su[9][9] = {{0}};
 	CvPoint corners[4];
 	IplImage* undistorted;
 	IplImage* res = cvCreateImage(
@@ -215,8 +252,16 @@ JNIEXPORT jobjectArray JNICALL Java_com_sudoku_SudokuDetector_detectSudoku
 	undistorted = findCorners(res,corners);
 	LOGI("Finding Corners Done.");
 
-	recognizeDigits(undistorted,su,byteOrder);
-	LOGI("Recognizing Digits Done");
+	if(checkSudokuSquare(corners)){
+		recognizeDigits(undistorted,su,byteOrder);
+		LOGI("Recognizing Digits Done");
+	}else{
+		for(int i = 0; i<9; i++){
+			for(int j=0; j<9; j++){
+				su[i][j] = -1;
+			}
+		}
+	}
 
 	if(su==NULL){
 		for(int i = 0; i<9; i++){
@@ -225,6 +270,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sudoku_SudokuDetector_detectSudoku
 			}
 		}
 	}
+
 	for(int i=0; i<9; i++){
 		int temp[9] = {0};
 		for(int j=0; j<9; j++){
@@ -284,12 +330,15 @@ void recognizeDigits(IplImage* undistorted, int sudo[9][9], int byteOrder){
 		IPL_DEPTH_8U,
 		1
 	);
-
+	int values[] = {0,1,0,1,1,1,0,1,0};
+	IplConvKernel* kernal = cvCreateStructuringElementEx(3,3,1,1,CV_SHAPE_CUSTOM,values);
 	IplImage* temp = cvCreateImage(cvGetSize(undistorted),IPL_DEPTH_8U,1);
 	cvCopy(undistorted,temp);
-	cvSmooth(temp,temp,CV_GAUSSIAN,5,5);
+	cvSmooth(temp,temp,CV_GAUSSIAN,3,3);
 	cvAdaptiveThreshold(temp, greyPic, 255, CV_ADAPTIVE_THRESH_MEAN_C,
 						CV_THRESH_BINARY_INV, 5,2);
+	cvDilate(greyPic,greyPic,kernal);
+
 	int coX = 0;  // The x coordinate of topleft vertex in the inner box
 	int coY = 0;  // The y coordinate of topleft vertex in the inner box
 	int coXL = 0; // The x coordinate of left edge
@@ -366,8 +415,8 @@ void recognizeDigits(IplImage* undistorted, int sudo[9][9], int byteOrder){
 					heightThreshold = 3*height/4;
 					midX = ( width+1 ) / 2;
 					midY = ( height+1 ) / 2;
-					int x = midX+5;
-					int y = midY+5;
+					int x = midX+2*offset;
+					int y = midY+2*offset;
 
 					for(;(x>detectThresholdX)&&(y>detectThresholdY); x--, y--){
 						findNO = false;
@@ -402,6 +451,8 @@ void recognizeDigits(IplImage* undistorted, int sudo[9][9], int byteOrder){
 							}
 						}
 						cvFloodFill(piece,maxPoint,CV_RGB(0,0,255));
+						cvErode(piece,piece,kernal);
+
 						CvMat* test = convertFormat(piece,digitX,digitY,digitWidth,digitHeight);
 						int digit = rd.recognize(test);
 					//	int digit = 2;
@@ -489,10 +540,10 @@ void findblob(IplImage* res){
 
 	double max = -1;
 	CvPoint maxPt;
-	CvConnectedComp a = CvConnectedComp();
-	CvConnectedComp* comp = &a;
 	int values[] = {0,1,0,1,1,1,0,1,0};
 	IplConvKernel* kernal = cvCreateStructuringElementEx(3,3,1,1,CV_SHAPE_CUSTOM,values);
+	CvConnectedComp a = CvConnectedComp();
+	CvConnectedComp* comp = &a;
 	cvDilate(res,res,kernal);
 
 	for(int y = 0; y<res->height;y++){
@@ -666,15 +717,15 @@ IplImage* findCorners(IplImage* res, CvPoint* cPoints){
 	if(tempLength>maxLength){
 		maxLength = tempLength;
 	}
-	maxLength = sqrt((double)maxLength);
+	maxLength = sqrt((double)maxLength)-10;
 	CvPoint2D32f src[4], dst[4];
-	src[0] = cvPoint2D32f(topLeft.x,topLeft.y);
+	src[0] = cvPoint2D32f(topLeft.x+5,topLeft.y+5);
 	dst[0] = cvPoint2D32f(0,0);
-	src[1] = cvPoint2D32f(topRight.x,topRight.y);
+	src[1] = cvPoint2D32f(topRight.x-5,topRight.y+5);
 	dst[1] = cvPoint2D32f(maxLength-1, 0);
-	src[2] = cvPoint2D32f(bottomRight.x,bottomRight.y);
+	src[2] = cvPoint2D32f(bottomRight.x-5,bottomRight.y-5);
 	dst[2] = cvPoint2D32f(maxLength-1, maxLength-1);
-	src[3] = cvPoint2D32f(bottomLeft.x,bottomLeft.y);
+	src[3] = cvPoint2D32f(bottomLeft.x+5,bottomLeft.y-5);
 	dst[3] = cvPoint2D32f(0, maxLength-1);
 	IplImage* pic = cvCreateImage(
 			cvGetSize(pImage),

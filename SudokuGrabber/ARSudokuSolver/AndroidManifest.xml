@@ -3,7 +3,7 @@
       package="com.sudoku"
       android:installLocation="auto" android:versionCode="1104" android:versionName="1.1.4">
     <uses-sdk android:minSdkVersion="3" android:targetSdkVersion="4" />
-    <application android:icon="@drawable/opensudoku_logo_72" android:label="@string/app_name">
+    <application android:icon="@drawable/sudokugrabber_logo_72" android:label="@string/app_name">
     <activity android:name=".OpenMenu"
               android:label="@string/app_name"
               android:debuggable="true">

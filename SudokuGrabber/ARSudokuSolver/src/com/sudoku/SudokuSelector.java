@@ -111,6 +111,9 @@ public class SudokuSelector extends Activity implements OnClickListener {
 		int puzzle[] = new int[81];
 		for(int i=0;i<9;i++){
 			for(int j=0; j<9; j++){
+				if(sudoku[i][j]==-1){
+					return null;
+				}
 				puzzle[i*9+j] = sudoku[i][j];
 			}
 		}

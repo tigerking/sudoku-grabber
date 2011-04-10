@@ -200,7 +200,7 @@
 	<string name="image_gallery">Gallery</string>
 	<string name="play_label">Play</string>
 	<string name="puzzle_saved_label">This puzzle has been saved, so you could play it later</string>
-	
+	<string name="no_puzzle_detected">Sorry, no puzzle is detected from the image</string>
 	<!-- Sample Data location. Don't forget to update the path in SudokuDetector.cpp -->
 	<string name="sample_data_path">/sdcard/Train/myTrainClasses</string>
 	<string name="sample_label_path">/sdcard/Train/myTrainData</string>

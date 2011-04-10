@@ -135,9 +135,20 @@ public class SudokuGrabber extends Activity{
 		Log.d(TAG,"OnCreate");
 		mDatabase = new SudokuDatabase(getApplicationContext());
 		oPuzzle = getIntent().getIntArrayExtra(KEY_PUZZLE);
-		if(puzzle == null){
-			puzzle = oPuzzle.clone();
+		if(oPuzzle ==null){
+			Toast toast = Toast.makeText(this, R.string.no_puzzle_detected, Toast.LENGTH_SHORT);
+			toast.setGravity(Gravity.CENTER, 0, 0);
+			toast.show();
+			puzzle = new int[81];
+			for(int i=0; i<81;i++){
+				puzzle[i] = 0;
+			}
+		}else{
+			if(puzzle == null){
+				puzzle = oPuzzle.clone();
+			}
 		}
+		
 		validateALlTiles();
 		puzzleView = new PuzzleView(this);
 		setContentView(puzzleView);
