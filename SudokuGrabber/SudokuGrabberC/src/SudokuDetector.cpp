@@ -6,7 +6,7 @@
 #include <highgui.h>
 #include "DigitReader.h"
 
-#define FILENAME "Train/sudoku2.jpg"
+#define FILENAME "Test/1.jpg"
 #define ROWS 28
 #define COLS 28
 #define HIGH_ENDIAN 0
@@ -118,15 +118,15 @@ IplImage* findCorners2(IplImage* res, CvPoint* cPoints){
 
 	// reverse the map
 	for(int y = 0; y<res->height;y++){
-	uchar* row = (uchar*)(res->imageData + y* res->widthStep);
-	for( int x = 0; x < res->width; x++){
-		if(row[x]==0){
-			row[x] = 255;
-		} else{
-			row[x] = 128;
+		uchar* row = (uchar*)(res->imageData + y* res->widthStep);
+		for( int x = 0; x < res->width; x++){
+			if(row[x]==0){
+				row[x] = 255;
+			} else{
+				row[x] = 128;
+			}
 		}
 	}
-}
 
 	CvPoint topLeft;
 	CvPoint topRight;
@@ -247,15 +247,15 @@ IplImage* findCorners2(IplImage* res, CvPoint* cPoints){
 	if(tempLength>maxLength){
 		maxLength = tempLength;
 	}
-	maxLength = sqrt((double)maxLength);
+	maxLength = sqrt((double)maxLength)-10;
 	CvPoint2D32f src[4], dst[4];
-	src[0] = cvPoint2D32f(topLeft.x,topLeft.y);
+	src[0] = cvPoint2D32f(topLeft.x+5,topLeft.y+5);
 	dst[0] = cvPoint2D32f(0,0);
-	src[1] = cvPoint2D32f(topRight.x,topRight.y);
+	src[1] = cvPoint2D32f(topRight.x-5,topRight.y+5);
 	dst[1] = cvPoint2D32f(maxLength-1, 0);
-	src[2] = cvPoint2D32f(bottomRight.x,bottomRight.y);
+	src[2] = cvPoint2D32f(bottomRight.x-5,bottomRight.y-5);
 	dst[2] = cvPoint2D32f(maxLength-1, maxLength-1);
-	src[3] = cvPoint2D32f(bottomLeft.x,bottomLeft.y);
+	src[3] = cvPoint2D32f(bottomLeft.x+5,bottomLeft.y-5);
 	dst[3] = cvPoint2D32f(0, maxLength-1);
 	IplImage* pic = cvLoadImage(FILENAME,0);
 	IplImage* undistorted = cvCreateImage(
@@ -266,6 +266,7 @@ IplImage* findCorners2(IplImage* res, CvPoint* cPoints){
 	CvMat* wrapMatrix = cvCreateMat(3,3,CV_32FC1);
 	wrapMatrix = cvGetPerspectiveTransform(src,dst,wrapMatrix);
 	cvWarpPerspective(pic,undistorted,wrapMatrix);
+
 
 	// Free Memory
 	cvReleaseImage(&pic);
@@ -287,13 +288,14 @@ bool detectSudoku(IplImage* pic, int sudoku[9][9]){
 		IPL_DEPTH_8U,
 		1
 	);
-
+	int values[] = {0,1,0,1,1,1,0,1,0};
+	IplConvKernel* kernal = cvCreateStructuringElementEx(3,3,1,1,CV_SHAPE_CUSTOM,values);
 	IplImage* temp = cvCreateImage(cvGetSize(pic),IPL_DEPTH_8U,1);
 	cvCopy(pic,temp);
-	cvSmooth(temp,temp,CV_GAUSSIAN,5,5);
+	cvSmooth(temp,temp,CV_GAUSSIAN,3,3);
 	cvAdaptiveThreshold(temp, greyPic, 255, CV_ADAPTIVE_THRESH_MEAN_C,
 						CV_THRESH_BINARY_INV, 5,2);
-	cvNamedWindow("Demo");
+	cvDilate(greyPic,greyPic,kernal);
 	cvNamedWindow("Grey");
 	cvShowImage("Grey",greyPic);
 	cvWaitKey(0);
@@ -328,7 +330,7 @@ bool detectSudoku(IplImage* pic, int sudoku[9][9]){
 	DigitReader rd = DigitReader();
 	rd.train(dataPath,labelPath,LOW_ENDIAN);
 
-	for(row = 5 ; row< 9; row++){
+	for(row = 0 ; row< 9; row++){
 		coY = row * sqrHeight;
 		for(col = 0; col < 9 ; col++){
 			coX = col * sqrWidth;
@@ -375,14 +377,16 @@ bool detectSudoku(IplImage* pic, int sudoku[9][9]){
 			heightThreshold = 3*height/4;
 			midX = ( width+1 ) / 2;
 			midY = ( height+1 ) / 2;
-			int x = midX+5;
-			int y = midY+5;
+			int x = midX+2*offset;
+			int y = midY+2*offset;
 
 			for(;(x>detectThresholdX)&&(y>detectThresholdY); x--, y--){
 				findNO = false;
 				uchar* ptr = (uchar*)(piece->imageData + y*piece->widthStep);
 				if(ptr[x]>128){
 					cvFloodFill(piece,cvPoint(x,y),CV_RGB(0,0,64),cvScalarAll(0),cvScalarAll(0),comp);
+					cvShowImage("Demo",piece);
+					cvWaitKey(0);
 					if((comp->rect.height<heightThreshold)&&(comp->rect.width<widthThreshold)&& (comp->area>areaThreshold)){
 						findNO = true;
 						maxPoint = cvPoint(x,y);
@@ -411,6 +415,7 @@ bool detectSudoku(IplImage* pic, int sudoku[9][9]){
 					}
 				}
 				cvFloodFill(piece,maxPoint,CV_RGB(0,0,255));
+				cvErode(piece,piece,kernal);
 				cvShowImage("Demo",piece);
 				cvWaitKey(0);
 				CvMat* test = convertFormat(piece,digitX,digitY,digitWidth,digitHeight);
@@ -443,6 +448,48 @@ IplImage* smoothImage(IplImage* src){
 	return temp;
 
 }
+
+double cosAngle(CvPoint p1, CvPoint p2, CvPoint p0){
+    double dx1 = p1.x - p0.x;
+    double dy1 = p1.y - p0.y;
+    double dx2 = p2.x - p0.x;
+    double dy2 = p2.y - p0.y;
+    return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2) + 1e-10);
+}
+
+bool checkSudokuSquare(CvPoint* corners){
+	CvPoint topLeft = corners[0];
+	CvPoint topRight = corners[1];
+	CvPoint bottomRight = corners[2];
+	CvPoint bottomLeft = corners[3];
+
+	int topEdge = (topRight.x - topLeft.x)^2 + (topRight.y - topLeft.y)^2;
+	int bottomEdge = (bottomRight.x - bottomLeft.x)^2 + (bottomRight.y - bottomLeft.y)^2;
+	int leftEdge = (bottomLeft.x - topLeft.x)^2 + (bottomRight.y - topLeft.y)^2;
+	int rightEdge = (bottomRight.x - topRight.x)^2 + (bottomRight.y - topRight.y)^2;
+
+	double maxCosine = 0;
+	double angle = 0;
+
+	// Check the topLeft corner
+	angle = cosAngle(topRight, bottomLeft, topLeft);
+	maxCosine = max(maxCosine, angle);
+
+	// Check the topRight corner
+	angle = cosAngle(topLeft, bottomRight, topRight);
+	maxCosine = max(maxCosine, angle);
+
+	// Check the bottomLeft corner
+	angle = cosAngle(topLeft, bottomRight, bottomLeft);
+	maxCosine = max(maxCosine, angle);
+
+	// Check the bottomRight corner
+	angle = cosAngle(topRight, bottomLeft, bottomRight);
+	maxCosine = max(maxCosine, angle);
+
+
+	return maxCosine<0.3;
+}
 int main(int argc, char* argv[])
 {
 	int sudoku[9][9] = {{0}};
@@ -457,18 +504,24 @@ int main(int argc, char* argv[])
 	);
 	res = smoothImage(src);
 	findblob(res);
-	cvNamedWindow("Original");
 
 	undistorted = findCorners2(res,corners);
-	cvShowImage("Original",src);
-	detectSudoku(undistorted,sudoku);
-	for(int i = 0; i<9;i++){
-		for(int j = 0; j<9; j++){
-			printf("%d ", sudoku[i][j]);
-		}
-		printf("\n");
-	}
+	bool temp = checkSudokuSquare(corners);
+	if(temp){
+		cvNamedWindow("Original");
+		printf("Yes\n");
+		cvShowImage("Original",src);
+			detectSudoku(undistorted,sudoku);
+			for(int i = 0; i<9;i++){
+				for(int j = 0; j<9; j++){
+					printf("%d ", sudoku[i][j]);
+				}
+				printf("\n");
+			}
 
+	}else{
+		printf("No\n");
+	}
 	cvReleaseImage(&src);
 	cvWaitKey(0);
 	cvDestroyWindow("Original");
